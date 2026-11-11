@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Konferensiya - Qabul Qilingan Maqolalar</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 40px 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+      color: white;
+      min-height: 100vh;
+    }
+    h1 { text-align: center; font-size: 2.5em; margin-bottom: 30px; text-shadow: 2px 4px 10px rgba(0,0,0,0.4); }
+    #loader { text-align: center; font-size: 1.2em; font-weight: bold; color: #ffeb3b; margin-bottom: 20px; }
+    
+    /* Statistika paneli dizayni */
+    .stats-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      max-width: 1200px;
+      margin: 0 auto 40px auto;
+    }
+    .stat-box {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 15px 25px;
+      text-align: center;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+      flex: 1 1 200px;
+      max-width: 300px;
+    }
+    .stat-box h3 { margin: 0 0 10px 0; font-size: 1.1em; color: #e0e0e0; }
+    .stat-box .raqam { font-size: 2.5em; font-weight: bold; margin: 0; color: #69f0ae; }
+    
+    .shoba-stats { text-align: left; font-size: 0.9em; }
+    .shoba-stats div { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 5px 0; }
+    .shoba-stats div:last-child { border: none; }
+
+    /* Asosiy kartochkalar gridi */
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 25px;
+      max-width: 1200px;
+      margin: 0 auto;
+      perspective: 1000px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      transition: transform 0.4s ease, box-shadow 0.4s ease;
+      transform-style: preserve-3d;
+    }
+    .card:hover {
+      transform: translateY(-10px) translateZ(20px) rotateX(5deg);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .muallif { font-size: 1.4em; font-weight: bold; color: #00e676; margin: 0 0 10px 0; }
+    .maqola { font-size: 1.1em; margin: 15px 0; font-style: italic; line-height: 1.5; color: #e0e0e0; }
+    .badge-container { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .shoba { background: rgba(3, 169, 244, 0.2); border: 1px solid rgba(3, 169, 244, 0.5); padding: 6px 12px; border-radius: 20px; font-size: 0.85em; color: #81d4fa; }
+    .tasdiqlandi { background: rgba(76, 175, 80, 0.2); border: 1px solid rgba(76, 175, 80, 0.5); color: #69f0ae; padding: 6px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; }
+
+    .sana { font-size: 0.8em; color: #9e9e9e; display: block; margin-top: 15px; text-align: right; }
+  </style>
+</head>
+<body>
+
+  <h1>🏆 Qabul Qilingan Maqolalar Reyestri</h1>
+  
+  <div id="loader">Baza bilan bog'lanilmoqda...</div>
+  
+  <!-- Avtomatik Statistika Paneli -->
+  <div class="stats-container" id="statistika"></div>
+
+  <!-- Maqolalar kartochkalari -->
+  <div class="grid-container" id="maqolalar-royxati"></div>
+
+  <script>
+    // ⚠️ YANGI API HAVOLANGIZNI SHU YERGA QO'YING:
+    const API_URL = "https://script.google.com/macros/s/AKfycbz6ss_ReL1MfOKjwjgFDsaUQnkngM4qj0qgknI1UAOzjcmTVFd1wg3xh6DzeHZskxg/exec";
+
+    fetch(API_URL)
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('loader').style.display = 'none';
+        const statsContainer = document.getElementById('statistika');
+        const listContainer = document.getElementById('maqolalar-royxati');
+        
+        if(data.length === 0) {
+          listContainer.innerHTML = "<h3 style='text-align:center; width:100%;'>Hozircha tasdiqlangan maqolalar yo'q.</h3>";
+          return;
+        }
+
+        // Statistika hisoblash
+        let jamiTasdiqlangan = data.length;
+        let shobaTaqsimoti = {};
+
+        data.forEach(item => {
+          let shobaNomi = item.shoba ? item.shoba.toString().trim() : "Sho'basi noma'lum";
+          if (shobaTaqsimoti[shobaNomi]) {
+            shobaTaqsimoti[shobaNomi]++;
+          } else {
+            shobaTaqsimoti[shobaNomi] = 1;
+          }
+        });
+
+        // Sho'balar statistikasi HTML
+        let shobaHTML = "";
+        for (const [nomi, soni] of Object.entries(shobaTaqsimoti)) {
+          shobaHTML += `<div><span>${nomi}</span> <b>${soni} ta</b></div>`;
+        }
+
+        // Ekranga statistikani chiqarish
+        statsContainer.innerHTML = `
+          <div class="stat-box">
+            <h3>✅ Jami Tasdiqlangan</h3>
+            <p class="raqam">${jamiTasdiqlangan}</p>
+          </div>
+          <div class="stat-box shoba-stats">
+            <h3 style="text-align: center; color: #ffca28; margin-bottom: 10px;">Sho'balar kesimida:</h3>
+            ${shobaHTML}
+          </div>
+        `;
+
+        // Maqolalarni chizish (oxirgisini birinchi ko'rsatish)
+        data.reverse().forEach(item => {
+          let sanaMatni = item.sana ? new Date(item.sana).toLocaleDateString('uz-UZ') : '';
+          
+          const cardHTML = `
+            <div class="card">
+              <div class="card-content">
+                <h2 class="muallif">👤 ${item.muallif}</h2>
+                <p class="maqola">📝 "${item.maqola}"</p>
+                <div class="badge-container">
+                  <span class="shoba">📌 ${item.shoba}</span>
+                  <span class="tasdiqlandi">${item.holat}</span>
+                </div>
+                <span class="sana">${sanaMatni}</span>
+              </div>
+            </div>
+          `;
+          listContainer.innerHTML += cardHTML;
+        });
+      })
+      .catch(error => {
+        document.getElementById('loader').innerHTML = "Xatolik: Ma'lumotni yuklab bo'lmadi.";
+      });
+  </script>
+
+</body>
+</html>
